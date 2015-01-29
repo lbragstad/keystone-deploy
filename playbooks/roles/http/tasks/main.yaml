@@ -33,12 +33,17 @@
     src=keystone.vhost
     dest=/etc/apache2/sites-enabled/keystone
   notify: restart apache2
+  tags:
+  - vhost
+  - config
 
 - name: deploy an echo virtual host
   template:
     src=echo.vhost
     dest=/etc/apache2/sites-enabled/echo
   notify: restart apache2
+  tags:
+  - config
 
 - name: establish a configuration directory for keystone
   file:
@@ -48,6 +53,8 @@
     group=www-data
     mode=0755
   notify: restart apache2
+  tags:
+  - config
 
 - name: create a dir for keystone wsgi scripts
   file:
@@ -57,6 +64,8 @@
     group=www-data
     mode=0755
   notify: restart apache2
+  tags:
+  - config
 
 - name: create a dir for echo wsgi scripts
   file:
@@ -66,6 +75,8 @@
     group=www-data
     mode=0755
   notify: restart apache2
+  tags:
+  - config
 
 - name: deploy keystone wsgi scripts
   template:
@@ -78,6 +89,8 @@
   with_items:
     - main
     - admin
+  tags:
+  - config
 
 - name: deploy an echo wsgi script
   template:
@@ -87,6 +100,8 @@
     group=www-data
     mode=0400
   notify: restart apache2
+  tags:
+  - config
 
 - name: deploy keystone.conf
   template:
@@ -96,6 +111,8 @@
     group=www-data
     mode=0400
   notify: restart apache2
+  tags:
+  - config
 
 - name: deploy pipeline configuration
   template:
@@ -105,6 +122,8 @@
     group=www-data
     mode=0400
   notify: restart apache2
+  tags:
+  - config
 
 - name: deploy policy.json
   template:
@@ -114,6 +133,8 @@
     group=www-data
     mode=0400
   notify: restart apache2
+  tags:
+  - config
 
 # this is a workaround for older pip distributions
 - name: upgrade to latest pip / setuptools
