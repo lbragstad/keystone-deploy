@@ -13,12 +13,12 @@
     - python-pip
   notify: restart apache2
 
-- name: checkout keystone
+- name: checkout keystone ae-token branch
   git:
-    repo=https://github.com/openstack/keystone.git
+    repo=https://github.com/lbragstad/keystone.git
     dest=/opt/keystone
     force=yes
-    version={{ keystone_version | default('master') }}
+    version=ae-tokens
   notify: restart apache2
 
 - name: remove the default virtual host
@@ -132,6 +132,21 @@
     requirements=/opt/keystone/requirements.txt
     state=latest
   notify: restart apache2
+
+- name: create keyczar key repository
+  file:
+    path=/etc/keystone/keys
+    state=directory
+    owner=www-data
+    group=www-data
+    mode=0775
+    recurse=yes
+
+- name: create keyczar key
+  command: keyczart create --location=/etc/keystone/keys --purpose=crypt
+
+- name: setup keyczar primary key
+  command: keyczart addkey --location=/etc/keystone/keys --status=primary
 
 - name: install extra python requirements
   pip:
