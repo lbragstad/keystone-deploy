@@ -1,9 +1,19 @@
 - name: update apt cache
   apt:
     update_cache=yes
+  when: ansible_os_family == "Debian"
 
 - name: install apt packages
   apt:
     pkg={{ item }}
   with_items:
     - memcached
+  when: ansible_os_family == "Debian"
+
+- name: install yum packages
+  yum:
+    pkg={{ item }}
+    update_cache=yes
+  with_items:
+    - memcached
+  when: ansible_os_family == "RedHat"

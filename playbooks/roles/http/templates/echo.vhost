@@ -1,18 +1,19 @@
 <VirtualHost *:80>
-    WSGIScriptAlias / /var/echo/echo.py
+    WSGIScriptAlias / /var/www/echo/echo.py
     WSGIDaemonProcess echo processes=3 threads=3 display-name=echo
     WSGIProcessGroup echo
 
-    ErrorLog /var/log/apache2/echo.error.log
+    ErrorLog /var/log/{{ apache_user | default('apache2')}}/echo.error.log
     LogLevel info
-    CustomLog /var/log/apache2/echo.access.log combined
-
-    <Directory /var/echo>
-        {% if apache24|success %}
-            Require all granted
-        {% else %}
-            Order allow,deny
-            Allow from all
-        {% endif %}
+    CustomLog /var/log/{{ apache_user | default('apache2')}}/echo.access.log combined
+{% if apache24|success %}
+    <Directory /var/www/echo>
+        Require all granted
     </Directory>
+{% else %}
+    <Directory /var/www/echo>
+        Order allow,deny
+        Allow from all
+    </Directory>
+{% endif %}
 </VirtualHost>

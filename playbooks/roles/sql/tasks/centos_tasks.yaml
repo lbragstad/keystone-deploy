@@ -1,0 +1,29 @@
+- name: install database packages
+  yum:
+    pkg={{ item }}
+    update_cache=yes
+  with_items:
+    - mariadb-server
+    - MySQL-python
+
+- name: restart mariadb-server
+  service:
+    name=mariadb
+    state=restarted
+
+- name: create a database for keystone
+  mysql_db:
+    name=keystone
+    state=present
+
+- name: create insecure keystone user
+  mysql_user:
+    name=keystone
+    host=localhost
+    password=keystone
+    priv=keystone.*:ALL
+
+- name: restart mariadb-server
+  service:
+    name=mariadb
+    state=restarted

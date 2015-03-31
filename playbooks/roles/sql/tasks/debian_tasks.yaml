@@ -1,0 +1,85 @@
+- name: install prerequisites for apt_key and apt_repository
+  apt:
+    pkg=python-software-properties
+
+- name: obtain mariadb key
+  apt_key:
+    url='http://keyserver.ubuntu.com/pks/lookup?op=get&search=0xCBCB082A1BB943DB'
+    state=present
+
+- name: add mariadb repository
+  apt_repository:
+    repo='deb http://nyc2.mirrors.digitalocean.com/mariadb/repo/5.5/debian wheezy main'
+    state=present
+
+- name: obtain percona key
+  apt_key:
+    keyserver=keys.gnupg.net
+    id=1C4CBDCDCD2EFD2A
+    state=present
+
+- name: add percona repository
+  apt_repository:
+    repo='deb http://repo.percona.com/apt wheezy main'
+    state=present
+
+- name: update apt cache
+  apt:
+    update_cache=yes
+
+- name: install mariadb galera server
+  apt:
+    pkg={{ item }}
+  with_items:
+    - mariadb-client-5.5
+    - mariadb-galera-server-5.5
+    - percona-toolkit
+    - percona-xtrabackup-21
+    - socat
+
+- name: override init script for mysql
+  template:
+    src=init.d_mysql
+    dest=/etc/init.d/mysql
+
+- name: start all nodes
+  service:
+    name=mysql
+    state=started
+
+- name: remove empty users
+  shell: echo "SET wsrep_on=OFF; DELETE FROM mysql.user WHERE user='';" | mysql mysql
+
+- name: create write-set replication user
+  shell: echo "SET wsrep_on=OFF; GRANT ALL ON *.* TO '{{ wsrep_sst_username }}'@'%' IDENTIFIED BY '{{ wsrep_sst_password }}';" | mysql mysql
+
+- name: grant mutual root privileges
+  shell: echo "GRANT ALL ON *.* TO 'root'@'{{ item }}';" | mysql mysql
+  with_items: groups["db"]
+
+- name: configure wsrep
+  template:
+    src=wsrep.cnf
+    dest=/etc/mysql/conf.d/wsrep.cnf
+  tags:
+  - config
+  - wsrep
+
+- name: set ulimit
+  template:
+    src=limits.conf
+    dest=/etc/security/limits.conf
+  tags:
+  - config
+
+# - name: create a database for keystone
+#   mysql_db:
+#     name=keystone
+#     state=present
+#
+# - name: create insecure keystone user
+#   mysql_user:
+#     name=keystone
+#     host=localhost
+#     password=keystone
+#     priv=keystone.*:ALL
