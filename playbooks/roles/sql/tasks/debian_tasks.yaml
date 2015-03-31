@@ -1,0 +1,30 @@
+- name: update apt cache
+  apt:
+    update_cache=yes
+
+- name: install database packages
+  apt:
+    pkg={{ item }}
+  with_items:
+    - mysql-server
+    - python-mysqldb
+
+- name: restart mysql-server
+  service:
+    name=mysql
+    state=restarted
+
+- name: create a database for keystone
+  mysql_db: name=keystone state=present
+
+- name: create insecure keystone user
+  mysql_user:
+    name=keystone
+    host=localhost
+    password=keystone
+    priv=keystone.*:ALL
+
+- name: restart mysql-server
+  service:
+    name=mysql
+    state=restarted

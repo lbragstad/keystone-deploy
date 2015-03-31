@@ -2,39 +2,43 @@ Listen 5000
 Listen 35357
 
 <VirtualHost *:5000>
-    WSGIScriptAlias / /var/keystone/main
+    WSGIScriptAlias / /var/www/keystone/main
     WSGIDaemonProcess keystone-main processes=3 threads=3 display-name=keystone-main
     WSGIProcessGroup keystone-main
 
-    ErrorLog /var/log/apache2/keystone-main.error.log
+    ErrorLog /var/log/{{ apache_user | default('apache2')}}/keystone-main.error.log
     LogLevel info
-    CustomLog /var/log/apache2/keystone-main.access.log combined
+    CustomLog /var/log/{{ apache_user | default('apache2')}}/keystone-main.access.log combined
 
-    <Directory /var/keystone>
-        {% if apache24|success %}
-            Require all granted
-        {% else %}
-            Order allow,deny
-            Allow from all
-        {% endif %}
+{% if apache24|success %}
+    <Directory /var/www/keystone>
+        Require all granted
     </Directory>
+{% else %}
+    <Directory /var/www/keystone>
+        Order allow,deny
+        Allow from all
+    </Directory>
+{% endif %}
 </VirtualHost>
 
 <VirtualHost *:35357>
-    WSGIScriptAlias / /var/keystone/admin
+    WSGIScriptAlias / /var/www/keystone/admin
     WSGIDaemonProcess keystone-admin processes=3 threads=3 display-name=keystone-admin
     WSGIProcessGroup keystone-admin
 
-    ErrorLog /var/log/apache2/keystone-admin.error.log
+    ErrorLog /var/log/{{ apache_user | default('apache2')}}/keystone-admin.error.log
     LogLevel info
-    CustomLog /var/log/apache2/keystone-admin.access.log combined
+    CustomLog /var/log/{{ apache_user | default('apache2')}}/keystone-admin.access.log combined
 
-    <Directory /var/keystone>
-        {% if apache24|success %}
-            Require all granted
-        {% else %}
-            Order allow,deny
-            Allow from all
-        {% endif %}
+{% if apache24|success %}
+    <Directory /var/www/keystone>
+        Require all granted
     </Directory>
+{% else %}
+    <Directory /var/www/keystone>
+        Order allow,deny
+        Allow from all
+    </Directory>
+{% endif %}
 </VirtualHost>
