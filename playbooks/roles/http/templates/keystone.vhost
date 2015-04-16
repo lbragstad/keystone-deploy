@@ -23,9 +23,12 @@ KeepAliveTimeout 0
     CustomLog /var/log/apache2/keystone-main.access.log combined
 
     <Directory /var/keystone>
+    {% if apache24 %}
+        Require all granted
+    {% else %}
         Order allow,deny
         Allow from all
-    </Directory>
+    {% endif %}</Directory>
 </VirtualHost>
 
 <VirtualHost *:35357>
@@ -38,7 +41,10 @@ KeepAliveTimeout 0
     CustomLog /var/log/apache2/keystone-admin.access.log combined
 
     <Directory /var/keystone>
+    {% if apache24 %}
+        Require all granted
+    {% else %}
         Order allow,deny
         Allow from all
-    </Directory>
+    {% endif %}</Directory>
 </VirtualHost>

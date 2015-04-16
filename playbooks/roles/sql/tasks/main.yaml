@@ -13,7 +13,7 @@
 
 - name: add mariadb repository
   apt_repository:
-    repo='deb http://nyc2.mirrors.digitalocean.com/mariadb/repo/5.5/debian wheezy main'
+    repo='deb http://ftp.osuosl.org/pub/mariadb/repo/5.5-galera/ubuntu trusty main'
     state=present
 
 - name: obtain percona key
@@ -24,8 +24,13 @@
 
 - name: add percona repository
   apt_repository:
-    repo='deb http://repo.percona.com/apt wheezy main'
+    repo='deb http://repo.percona.com/apt trusty main'
     state=present
+
+- name: set galera repo pin
+  template:
+    src=galera
+    dest=/etc/apt/preferences.d/galera
 
 - name: update apt cache
   apt:
@@ -35,10 +40,21 @@
   apt:
     pkg={{ item }}
   with_items:
-    - mariadb-client-5.5
-    - mariadb-galera-server-5.5
+    - mariadb-galera-server
+
+- name: install galera
+  apt:
+    pkg={{ item }}
+  with_items:
+    - galera-3
+
+- name: install mariadb galera server
+  apt:
+    pkg={{ item }}
+  with_items:
+    - mariadb-client
     - percona-toolkit
-    - percona-xtrabackup-21
+    - percona-xtrabackup
     - socat
 
 - name: override init script for mysql
@@ -75,15 +91,3 @@
     dest=/etc/security/limits.conf
   tags:
   - config
-
-# - name: create a database for keystone
-#   mysql_db:
-#     name=keystone
-#     state=present
-#
-# - name: create insecure keystone user
-#   mysql_user:
-#     name=keystone
-#     host=localhost
-#     password=keystone
-#     priv=keystone.*:ALL

@@ -12,7 +12,13 @@
     - python-dev
     - python-pip
     - python-mysqldb
+    - libffi-dev
+    - libssl-dev
   notify: restart apache2
+
+- shell: "apache2 -v | grep 'Apache/2.4'"
+  register: apache24
+  ignore_errors: True
 
 - name: checkout keystone
   git:
@@ -31,7 +37,7 @@
 - name: deploy a keystone virtual host
   template:
     src=keystone.vhost
-    dest=/etc/apache2/sites-enabled/keystone
+    dest=/etc/apache2/sites-enabled/keystone.conf
   notify: restart apache2
   tags:
   - vhost
@@ -40,7 +46,7 @@
 - name: deploy an echo virtual host
   template:
     src=echo.vhost
-    dest=/etc/apache2/sites-enabled/echo
+    dest=/etc/apache2/sites-enabled/echo.conf
   notify: restart apache2
   tags:
   - config
@@ -55,6 +61,24 @@
   notify: restart apache2
   tags:
   - config
+
+- name: establish a configuration directory for fernet encryption keys
+  file:
+    path=/etc/keystone/fernet-keys
+    state=directory
+    owner=www-data
+    group=www-data
+    mode=0700
+  notify: restart apache2
+
+- name: create a dir for keystone wsgi scripts
+  file:
+    path=/var/keystone
+    state=directory
+    owner=www-data
+    group=www-data
+    mode=0755
+  notify: restart apache2
 
 - name: create a dir for keystone wsgi scripts
   file:
@@ -167,3 +191,6 @@
 
 - name: run database migrations
   shell: keystone-manage db_sync
+
+- name: setup the fernet encryption keys
+  command: keystone-manage fernet_setup --keystone-user=www-data --keystone-group=www-data
