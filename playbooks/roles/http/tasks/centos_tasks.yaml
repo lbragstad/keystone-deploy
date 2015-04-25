@@ -69,6 +69,16 @@
     mode=0755
   notify: restart httpd
 
+- name: establish a configuration directory for fernet encryption keys
+  file:
+    path=/etc/keystone/fernet-keys
+    state=directory
+    owner=apache
+    group=apache
+    mode=0700
+  notify: restart httpd
+  when: use_fernet is defined
+
 - name: create dirs for wsgi scripts
   file:
     path=/var/www/{{ item }}
@@ -139,13 +149,6 @@
     name=iptables
     state=stopped
 
-- name: open up keystone ports
-  firewalld:
-    permanent=true
-    port=35357/tcp
-    state=enabled
-  notify: restart httpd
-
 - name: open up port 35357
   command: iptables -A INPUT -p tcp --dport 35357 -j ACCEPT
 
@@ -162,3 +165,7 @@
   service:
     name=iptables
     state=started
+
+- name: setup the fernet encryption keys
+  command: keystone-manage fernet_setup --keystone-user=apache --keystone-group=apache
+  when: use_fernet is defined
