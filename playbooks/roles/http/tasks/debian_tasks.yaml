@@ -82,6 +82,16 @@
     mode=0755
   notify: restart apache
 
+- name: establish a configuration directory for fernet encryption keys
+  file:
+    path=/etc/keystone/fernet-keys
+    state=directory
+    owner=www-data
+    group=www-data
+    mode=0700
+  notify: restart apache
+  when: use_fernet is defined
+
 - name: create dirs for wsgi scripts
   file:
     path=/var/www/{{ item }}
@@ -148,3 +158,7 @@
 
 - name: run database migrations
   shell: keystone-manage db_sync
+
+- name: setup the fernet encryption keys
+  command: keystone-manage fernet_setup --keystone-user=www-data --keystone-group=www-data
+  when: use_fernet is defined
