@@ -1,0 +1,56 @@
+---
+- name: update apt cache
+  apt:
+    update_cache=yes
+
+- name: install pip
+  apt:
+    pkg=python-pip
+
+- name: install newrelic
+  pip:
+    name=newrelic
+    state=latest
+
+- name: deploy new relic configuration file
+  template:
+    src=newrelic.ini
+    dest=/etc/keystone/newrelic.ini
+    owner=www-data
+    group=www-data
+    mode=0400
+
+- name: wrap keystone wsgi with new relic
+  template:
+    src=keystone.wsgi
+    dest=/var/www/keystone/{{ item }}
+    owner=www-data
+    group=www-data
+    mode=0400
+  with_items:
+    - main
+    - admin
+
+- name: configure the new relic repository
+  template:
+    src=sources.list.d
+    dest=/etc/apt/sources.list.d/newrelic.list
+
+- name: trust the new relic GPG key
+  shell: wget -O- https://download.newrelic.com/548C16BF.gpg | apt-key add -
+
+- name: update apt cache
+  apt:
+    update_cache=yes
+
+- name: install the server monitor package from new relic
+  apt:
+    name=newrelic-sysmond
+    state=latest
+
+- name: add license key to new relic configuration file
+  shell: nrsysmond-config --set license_key={{ newrelic_license_key }}
+
+- name: start sysmond
+  shell: /etc/init.d/newrelic-sysmond start
+  notify: restart apache2

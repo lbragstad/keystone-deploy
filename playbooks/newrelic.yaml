@@ -1,0 +1,5 @@
+- hosts: all
+  roles:
+  - newrelic
+  vars_files:
+  - external-vars.yaml
