@@ -1,4 +1,9 @@
+- hosts: lb
+  gather_facts: True
+
 - hosts: app
   roles:
   - bobbyrenwick.pip
   - http
+  vars_files:
+  - external-vars.yaml

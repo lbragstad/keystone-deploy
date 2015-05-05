@@ -16,6 +16,9 @@ import os
 
 from keystone.server import wsgi as wsgi_server
 
+import newrelic.agent
+newrelic.agent.initialize('/etc/keystone/newrelic.ini')
+
 
 name = os.path.basename(__file__)
 
@@ -23,3 +26,4 @@ name = os.path.basename(__file__)
 # The following is a reference to Python Paste Deploy documentation
 # http://pythonpaste.org/deploy/
 application = wsgi_server.initialize_application(name)
+application = newrelic.agent.WSGIApplicationWrapper(application)

@@ -1,3 +1,6 @@
+- hosts: all
+  gather_facts: True
+
 - hosts: lb
   roles:
   - lb

@@ -1,56 +1,65 @@
+{% set process_count = processes | default(2 * ansible_processor_vcpus) %}
+{% set thread_count = threads | default(1) %}
+{% set virtual_hosts = 2 %}
+
+ServerLimit {{ virtual_hosts * process_count }}
+MaxClients {{ virtual_hosts * process_count }}
+StartServers {{ virtual_hosts * process_count }}
+MinSpareServers {{ process_count }}
+MaxSpareServers {{ process_count }}
+MaxRequestWorkers {{ virtual_hosts * process_count * thread_count }}
+
 Listen 5000
 Listen 35357
 
-KeepAliveTimeout 0
-
-<IfModule mpm_worker_module>
-    StartServers          2
-    MinSpareThreads      25
-    MaxSpareThreads      75
-    ThreadLimit          64
-    ThreadsPerChild      25
-    MaxClients          150
-    MaxRequestsPerChild   0
-</IfModule>
-
 <VirtualHost *:5000>
     WSGIScriptAlias / /var/www/keystone/main
-    WSGIDaemonProcess keystone-main processes=3 threads=3 display-name=keystone-main
+    WSGIDaemonProcess keystone-main processes={{ process_count }} threads={{ thread_count }} display-name=keystone-main
     WSGIProcessGroup keystone-main
 
-    ErrorLog /var/log/{{ apache_user | default('apache2')}}/keystone-main.error.log
+    ErrorLog /var/log/apache2/keystone-main.error.log
     LogLevel info
-    CustomLog /var/log/{{ apache_user | default('apache2')}}/keystone-main.access.log combined
+    CustomLog /var/log/apache2/keystone-main.access.log combined
 
-{% if apache24|success %}
+    {% if apache24|success -%}
+
     <Directory /var/www/keystone>
         Require all granted
     </Directory>
-{% else %}
+
+    {%- else -%}
+
     <Directory /var/www/keystone>
         Order allow,deny
         Allow from all
     </Directory>
-{% endif %}
+
+    {%- endif %}
+
 </VirtualHost>
 
 <VirtualHost *:35357>
     WSGIScriptAlias / /var/www/keystone/admin
-    WSGIDaemonProcess keystone-admin processes=3 threads=3 display-name=keystone-admin
+    WSGIDaemonProcess keystone-admin processes={{ process_count }} threads={{ thread_count }} display-name=keystone-admin
     WSGIProcessGroup keystone-admin
 
-    ErrorLog /var/log/{{ apache_user | default('apache2')}}/keystone-admin.error.log
+    ErrorLog /var/log/apache2/keystone-admin.error.log
     LogLevel info
-    CustomLog /var/log/{{ apache_user | default('apache2')}}/keystone-admin.access.log combined
+    CustomLog /var/log/apache2/keystone-admin.access.log combined
 
-{% if apache24|success %}
+    {% if apache24|success -%}
+
     <Directory /var/www/keystone>
         Require all granted
     </Directory>
-{% else %}
+
+    {%- else -%}
+
     <Directory /var/www/keystone>
         Order allow,deny
         Allow from all
     </Directory>
-{% endif %}
+
+    {%- endif %}
+
 </VirtualHost>
