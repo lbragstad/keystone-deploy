@@ -1,4 +1,4 @@
-{% set process_count = processes | default(2 * ansible_processor_vcpus) %}
+{% set process_count = processes | default(4 * ansible_processor_vcpus) %}
 {% set thread_count = threads | default(1) %}
 {% set virtual_hosts = 2 %}
 
@@ -8,6 +8,7 @@ StartServers {{ virtual_hosts * process_count }}
 MinSpareServers {{ process_count }}
 MaxSpareServers {{ process_count }}
 MaxRequestWorkers {{ virtual_hosts * process_count * thread_count }}
+ExtendedStatus On
 
 Listen 5000
 Listen 35357

@@ -20,42 +20,54 @@
 
 - name: disable mpm_event
   command: a2dismod mpm_event
+  tags: config
 
 - name: disable mpm_worker
   command: a2dismod mpm_worker
+  tags: config
 
 - name: enable mpm_prefork
   command: a2enmod mpm_prefork
   ignore_errors: true
+  tags: config
 
 - name: install newrelic
   pip:
     name=newrelic
     state=latest
-
-- name: deploy new relic configuration file
-  template:
-    src=newrelic.ini
-    dest=/etc/keystone/newrelic.ini
-    owner=www-data
-    group=www-data
-    mode=0400
+  tags: config
 
 - shell: "apache2 -v | grep 'Apache/2.4'"
   register: apache24
   ignore_errors: True
+  tags: config
 
 - name: checkout source code
   git:
     repo=https://review.openstack.org/openstack/{{ item.repo }}.git
     dest=/opt/{{ item.repo }}
     force=yes
-    refspec={{ item.version }}
+    version={{ item.version }}~0
   with_items:
-    - { repo: 'keystone', version: "{{ keystone_version | default('refs/heads/master') }}"  }
-    - { repo: 'keystonemiddleware', version: "{{ keystonemiddleware_version | default('refs/heads/master') }}" }
-    - { repo: 'python-keystoneclient', version: "{{ keystoneclient_version | default('refs/heads/master') }}" }
+    - { repo: 'keystone', version: "{{ keystone_version | default('master') }}" }
+    - { repo: 'python-keystoneclient', version: "{{ keystoneclient_version | default('master') }}" }
+    - { repo: 'keystonemiddleware', version: "{{ keystonemiddleware_version | default('master') }}" }
   notify: restart apache
+  tags:
+    - git
+    - config
+
+- name: apply custom patches
+  shell:
+    cd /opt/keystone && git fetch https://review.openstack.org/openstack/keystone.git {{ item }} && git diff FETCH_HEAD~1 FETCH_HEAD | git apply
+  with_items:
+    - refs/changes/81/182781/1
+    - refs/changes/87/183187/1
+    - refs/changes/88/183188/1
+  notify: restart apache
+  tags:
+    - git
+    - config
 
 - name: create access logs
   file:
@@ -67,6 +79,7 @@
   with_items:
     - keystone-admin
     - keystone-main
+  tags: config
 
 - name: create error logs
   file:
@@ -78,18 +91,21 @@
   with_items:
     - keystone-admin
     - keystone-main
+  tags: config
 
 - name: remove the default virtual host
   file:
     path=/etc/apache2/sites-enabled/000-default
     state=absent
   notify: restart apache
+  tags: config
 
 - name: remove the echo virtual host
   file:
     path=/etc/apache2/sites-enabled/echo.conf
     state=absent
   notify: restart apache
+  tags: config
 
 - name: remove the default virtual host for Apache 2.4
   file:
@@ -97,12 +113,14 @@
     state=absent
   when: apache24|success
   notify: restart apache
+  tags: config
 
 - name: deploy a virtual hosts
   template:
     src=keystone.vhost
     dest=/etc/apache2/sites-enabled/keystone.conf
   notify: restart apache
+  tags: config
 
 - name: establish a configuration directory for keystone
   file:
@@ -112,6 +130,16 @@
     group=www-data
     mode=0755
   notify: restart apache
+  tags: config
+
+- name: deploy new relic configuration file
+  template:
+    src=newrelic.ini
+    dest=/etc/keystone/newrelic.ini
+    owner=www-data
+    group=www-data
+    mode=0400
+  tags: config
 
 - name: establish a configuration directory for fernet encryption keys
   file:
@@ -122,6 +150,7 @@
     mode=0700
   notify: restart apache
   when: use_fernet is defined
+  tags: config
 
 - name: create dirs for wsgi scripts
   file:
@@ -131,6 +160,7 @@
     group=www-data
     mode=0755
   notify: restart apache
+  tags: config
 
 - name: deploy keystone wsgi scripts
   template:
@@ -143,6 +173,7 @@
   with_items:
     - admin
     - main
+  tags: config
 
 - name: deploy keystone configuration files
   template:
@@ -156,6 +187,7 @@
     - paste.ini
     - policy.json
   notify: restart apache
+  tags: config
 
 - name: install extra python requirements
   pip:
@@ -166,6 +198,7 @@
     - python-memcached
     - six  # workaround for debian wheezy?
   notify: restart apache
+  tags: config
 
 - name: install python projects
   shell: cd /opt/{{ item }} && python setup.py install
@@ -174,10 +207,13 @@
     - keystonemiddleware
     - python-keystoneclient
   notify: restart apache
+  tags: config
 
 - name: run database migrations
   shell: keystone-manage db_sync
+  tags: config
 
 - name: setup the fernet encryption keys
   command: keystone-manage fernet_setup --keystone-user=www-data --keystone-group=www-data
   when: use_fernet is defined
+  tags: config
