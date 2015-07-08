@@ -31,7 +31,8 @@
 
 - name: enable mpm_prefork
   command: a2enmod mpm_prefork
-  when: not mpm_prefork.stat.exists
+  when: not mpm_prefork.stat.exists and
+      (ansible_lsb.id == "Ubuntu" and ansible_lsb.release == "14.04")
 
 - name: remove the default virtual host
   file:

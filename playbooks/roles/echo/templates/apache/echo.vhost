@@ -5,9 +5,11 @@
 ServerLimit {{ virtual_hosts * process_count }}
 MaxClients {{ virtual_hosts * process_count }}
 StartServers {{ virtual_hosts * process_count }}
+{% if apache24|success -%}
 MinSpareServers {{ process_count }}
 MaxSpareServers {{ process_count }}
 MaxRequestWorkers {{ virtual_hosts * process_count * thread_count }}
+{%- endif %}
 
 <VirtualHost *:80>
     WSGIScriptAlias / /var/echo/echo.py
