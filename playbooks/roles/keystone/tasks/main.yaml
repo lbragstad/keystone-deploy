@@ -75,6 +75,13 @@
     - keystone
     - python-keystoneclient
 
+- name: install project requirements
+  pip:
+    requirements=/opt/{{ item }}/requirements.txt
+  with_items:
+    - keystone
+    - python-keystoneclient
+
 - name: run database migrations
   command: keystone-manage db_sync
 
