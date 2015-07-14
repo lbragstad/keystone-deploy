@@ -15,8 +15,8 @@ logging.basicConfig()
 
 AUTH_TOKEN_CONF = {
     'auth_plugin': 'password',
-    'auth_uri': 'http://{{ keystone_host | default(hostvars[groups["keystone"][0]]["ansible_default_ipv4"]["address"]) }}:35357/',
-    'auth_url': 'http://{{ keystone_host | default(hostvars[groups["keystone"][0]]["ansible_default_ipv4"]["address"]) }}:35357/',
+    'auth_uri': 'https://{{ keystone_host | default(hostvars[groups["service_provider"][0]]["ansible_default_ipv4"]["address"]) }}/',
+    'auth_url': 'https://{{ keystone_host | default(hostvars[groups["service_provider"][0]]["ansible_default_ipv4"]["address"]) }}/',
     'username': 'admin',
     'user_domain_id': 'default',
     'password': 'password',

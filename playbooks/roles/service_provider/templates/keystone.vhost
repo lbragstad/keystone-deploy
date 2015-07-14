@@ -16,6 +16,7 @@ Listen 35357
 
 <VirtualHost *:443>
     WSGIScriptAlias / /var/keystone/main
+    WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /var/keystone/main/$1
     WSGIDaemonProcess keystone-main processes={{ process_count }} threads={{ thread_count }} display-name=keystone-main
     WSGIProcessGroup keystone-main
 
@@ -36,13 +37,14 @@ Listen 35357
         Allow from all
     </Directory>
 
-    {% endif %}
+    {% endif -%}
     SSLCertificateFile "/etc/keystone/ssl/certs/signing_cert.pem"
     SSLCertificateKeyFile "/etc/keystone/ssl/private/signing_key.pem"
 </VirtualHost>
 
 <VirtualHost *:35357>
     WSGIScriptAlias / /var/keystone/admin
+    WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /var/keystone/admin/$1
     WSGIDaemonProcess keystone-admin processes={{ process_count }} threads={{ thread_count }} display-name=keystone-admin
     WSGIProcessGroup keystone-admin
 
@@ -63,7 +65,18 @@ Listen 35357
         Allow from all
     </Directory>
 
-    {% endif %}
+    {% endif -%}
     SSLCertificateFile "/etc/keystone/ssl/certs/signing_cert.pem"
     SSLCertificateKeyFile "/etc/keystone/ssl/private/signing_key.pem"
 </VirtualHost>
+
+<Location /Shibboleth.sso>
+    SetHandler shib
+</Location>
+
+<LocationMatch /v3/OS-FEDERATION/identity_providers/.*?/protocols/saml2/auth>
+    ShibRequestSetting requireSession 1
+    AuthType shibboleth
+    ShibExportAssertion Off
+    Require valid-user
+</LocationMatch>

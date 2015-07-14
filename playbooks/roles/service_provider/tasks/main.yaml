@@ -1,0 +1,44 @@
+- name: install apt packages
+  apt:
+    pkg=libapache2-mod-shib2
+    update_cache=yes
+    cache_valid_time=600
+  notify: restart services
+
+- name: enable shibboleth
+  command: a2enmod shib2
+
+- name: redeploy keystone vhost for service provider config
+  template:
+    src=keystone.vhost
+    dest=/etc/apache2/sites-enabled/keystone.conf
+  notify:
+    - restart services
+
+- name: deploy keystone configuration for federation
+  lineinfile: "dest=/etc/keystone/keystone.conf regexp={{item.regex}} line={{item.line}}"
+  with_items:
+      - { line: 'methods=password,token,oauth1,saml2', regex: '^methods=password,token' }
+  notify:
+    - restart services
+
+- name: deploy attribute-map.xml
+  template:
+    src=attribute-map.xml
+    dest=/etc/shibboleth/attribute-map.xml
+  notify:
+    - restart services
+
+- name: deploy shibboleth2.xml
+  template:
+    src=shibboleth2.xml
+    dest=/etc/shibboleth/shibboleth2.xml
+  notify:
+    - restart services
+
+- name: create new certificates
+  command: shib-keygen -y 1
+    creates=/etc/shibboleth/sp-cert.pem
+  notify:
+    - restart services
+    - restart shibd

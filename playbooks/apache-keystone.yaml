@@ -1,4 +1,11 @@
-- hosts: keystone
+- hosts: identity_provider
   roles:
   - apache2
   - keystone
+  - identity_provider
+
+- hosts: service_provider
+  roles:
+  - apache2
+  - keystone
+  - service_provider

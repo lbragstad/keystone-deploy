@@ -5,6 +5,40 @@
   tags:
     - config
 
+- name: add ssl options to keystone config
+  lineinfile: "dest=/etc/keystone/keystone.conf line={{item.line}}"
+  with_items:
+    - { line: '[ssl]' }
+    - { line: 'enable=True' }
+    - { line: 'certfile=/etc/keystone/ssl/certs/signing_cert.pem' }
+    - { line: 'keyfile=/etc/keystone/ssl/private/signing_key.pem' }
+    - { line: 'ca_certs=/etc/keystone/ssl/certs/ca.pem' }
+    - { line: 'ca_key=/etc/keystone/ssl/certs/cakey.pem' }
+    - { line: 'key_size=1024' }
+    - { line: 'valid_days=3650' }
+    - { line: 'ca_password=None' }
+    - { line: 'cert_required=False' }
+    - { line: 'cert_subject=/C=US/ST=Unset/L=Unset/O=Unset/CN={{ansible_default_ipv4["address"]}}' }
+
+- name: run ssl setup
+  command: keystone-manage ssl_setup --keystone-user=www-data --keystone-group=www-data
+
+- name: fetch keys and certs from keystone
+  fetch: 'src=/etc/keystone/ssl/certs/{{item}} fail_on_missing=yes dest=/tmp/'
+  with_items:
+    - 'ca.pem'
+    - 'cakey.pem'
+
+- name: add allow apache to listen on 443
+  template:
+    src=apache/ports.conf
+    dest=/etc/apache2/ports.conf
+    owner=www-data
+    group=www-data
+
+- name: enable ssl
+  command: a2enmod ssl
+
 - name: deploy virtual hosts
   template:
     src=apache/{{ item }}.vhost

@@ -1,3 +1,14 @@
+- name: install apt packages
+  apt:
+    pkg={{ item }}
+    update_cache=yes
+    cache_valid_time=600
+  with_items:
+    - git
+    - libffi-dev
+    - libssl-dev
+    - python-dev
+
 - name: checkout source code
   git:
     repo=https://review.openstack.org/openstack/{{ item.repo }}.git

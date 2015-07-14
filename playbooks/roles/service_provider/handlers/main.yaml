@@ -1,0 +1,9 @@
+- name: restart services
+  service:
+    name=apache2
+    state=restarted
+
+- name: restart shibd
+  service:
+    name=shibd
+    state=restarted

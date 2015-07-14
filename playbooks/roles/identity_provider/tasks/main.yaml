@@ -1,0 +1,48 @@
+- name: install federation requirements
+  apt:
+    pkg=xmlsec1
+    update_cache=yes
+
+- name: install pip requirements for federation
+  pip:
+    name=pysaml2
+    state=latest
+
+- name: deploy keystone configuration for federation
+  lineinfile: "dest=/etc/keystone/keystone.conf regexp={{item.regex}} line={{item.line}}"
+  with_items:
+      - { line: 'methods=password,token,oauth1,saml2', regex: '^methods=password,token' }
+  notify:
+    - restart services
+
+- name: deploy keystone config with federation settings
+  lineinfile: "dest=/etc/keystone/keystone.conf line={{item.line}}"
+  with_items:
+    - { line: '[saml]' }
+    - { line: 'certfile=/etc/keystone/ssl/certs/ca.pem' }
+    - { line: 'keyfile=/etc/keystone/ssl/certs/cakey.pem' }
+    - { line: 'idp_entity_id=https://{{ ansible_default_ipv4["address"] }}/v3/OS-FEDERATION/saml2/idp' }
+    - { line: 'idp_sso_endpoint=https://{{ ansible_default_ipv4["address"] }}/v3/OS-FEDERATION/saml2/sso' }
+    - { line: 'idp_metadata_path=/etc/keystone/keystone_idp_metadata.xml' }
+    - { line: 'idp_organization_name=example' }
+    - { line: 'idp_organization_display_name=example' }
+    - { line: 'idp_organization_url=example.org' }
+    - { line: 'idp_contact_company=example_contact' }
+    - { line: 'idp_contact_name=Example' }
+    - { line: 'idp_contact_surname=Contact' }
+    - { line: 'idp_contact_email=example.contact@example.com' }
+    - { line: 'idp_contact_telephone=555-555-5555' }
+    - { line: 'idp_contact_type=technical' }
+  notify:
+    restart services
+
+- name: setup ssl for keystone
+  shell: keystone-manage ssl_setup --keystone-user=www-data --keystone-group=www-data
+  notify:
+    restart services
+
+- name: generate identity provider metadata
+  shell: keystone-manage saml_idp_metadata > /etc/keystone/keystone_idp_metadata.xml
+    creates=/etc/keystone/keystone_idp_metadata.xml
+  notify:
+    restart services

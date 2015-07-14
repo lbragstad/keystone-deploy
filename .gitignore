@@ -1,3 +1,5 @@
 vagrant_ansible_inventory_default
-inventory*
+*inventory*
 playbooks/roles/bobbyrenwick.pip/
+*.swp
+*.pyc
