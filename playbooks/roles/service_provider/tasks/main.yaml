@@ -42,3 +42,8 @@
   notify:
     - restart services
     - restart shibd
+
+- name: restart shibd
+  service:
+    name=shibd
+    state=restarted

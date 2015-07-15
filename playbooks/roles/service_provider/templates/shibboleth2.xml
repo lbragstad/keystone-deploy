@@ -11,7 +11,7 @@
             </SSO>
             <Logout>SAML2 Local</Logout>
             <Handler type="MetadataGenerator" Location="/Metadata" signing="false"/>
-            <Handler type="Status" Location="/Status" acl="127.0.0.1"/>
+            <Handler type="Status" Location="/Status"/>
             <Handler type="Session" Location="/Session" showAttributeValues="false"/>
             <Handler type="DiscoveryFeed" Location="/DiscoFeed"/>
         </Sessions>
