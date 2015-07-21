@@ -23,22 +23,23 @@ class K2KFederationTestCase(unittest.TestCase):
 
     def setUp(self):
         # Setup the service provider and the identity provider
-        self._setup_identity_provider()
-        self._setup_service_provider()
         self.sp_id = os.environ.get('OS_SP_ID')
         self.auth_url = os.environ.get('OS_AUTH_URL')
         self.project_id = os.environ.get('OS_PROJECT_ID')
+        self.sp_project_id = os.environ.get('OS_SP_PROJECT_ID')
         self.username = os.environ.get('OS_USERNAME')
         self.password = os.environ.get('OS_PASSWORD')
         self.domain_id = os.environ.get('OS_DOMAIN_ID')
+        self._setup_identity_provider()
+        self._setup_service_provider()
 
     def _setup_service_provider(self):
         a = v3.Password(auth_url=SP_ENDPOINT,
                         username='admin',
                         password='password',
-                        user_domain_name='default',
+                        user_domain_name='Default',
                         project_name='admin',
-                        project_domain_name='default')
+                        project_domain_name='Default')
         s = session.Session(auth=a, verify=SP_CERT, cert=(SP_CERT, SP_KEY))
         c = client.Client(session=s)
 
@@ -56,14 +57,15 @@ class K2KFederationTestCase(unittest.TestCase):
         else:
             group = c.groups.create(domain=domain, name=group_name)
 
-        role_name = 'Member'
-        roles = c.roles.list(name='Member')
+        role_name = 'admin'
+        roles = c.roles.list(name='admin')
         if roles:
             role = roles[0]
         else:
             role = c.roles.create(name=role_name)
 
         c.roles.grant(role=role, group=group, domain=domain)
+        c.roles.grant(role=role, group=group, project=self.sp_project_id)
 
         rules = [{
             "local": [
@@ -112,9 +114,9 @@ class K2KFederationTestCase(unittest.TestCase):
         a = v3.Password(auth_url=IDP_ENDPOINT,
                         username='admin',
                         password='password',
-                        user_domain_name='default',
+                        user_domain_name='Default',
                         project_name='admin',
-                        project_domain_name='default')
+                        project_domain_name='Default')
         s = session.Session(auth=a, verify=IDP_CERT, cert=(IDP_CERT, IDP_KEY))
         c = client.Client(session=s)
 
@@ -133,24 +135,29 @@ class K2KFederationTestCase(unittest.TestCase):
             c.federation.service_providers.create(**sp_ref)
 
     def _v3_authenticate(self):
-        auth = v3.Password(auth_url=self.auth_url,
-                           username=self.username,
-                           password=self.password,
-                           user_domain_id=self.domain_id,
-                           project_id=self.project_id)
-        self.session = session.Session(auth=auth, verify=False)
+        self.session = session.Session(
+            auth=v3.Password(auth_url=self.auth_url,
+                             username=self.username,
+                             password=self.password,
+                             user_domain_id=self.domain_id,
+                             project_id=self.project_id),
+            verify=False)
         self.session.auth.get_auth_ref(self.session)
-        self.token = self.session.auth.get_token(self.session)
+        return self.session.auth.get_token(self.session)
 
-    def _generate_token_json(self):
-        return {
+    def _check_response(self, response):
+        if not response.ok:
+            raise Exception("Something went wrong, %s" % response.__dict__)
+
+    def _get_saml2_ecp_assertion(self, token_id):
+        request_body = json.dumps({
             "auth": {
                 "identity": {
                     "methods": [
                         "token"
                     ],
                     "token": {
-                        "id": self.token
+                        "id": token_id
                     }
                 },
                 "scope": {
@@ -159,20 +166,13 @@ class K2KFederationTestCase(unittest.TestCase):
                     }
                 }
             }
-        }
-
-    def _check_response(self, response):
-        if not response.ok:
-            raise Exception("Something went wrong, %s" % response.__dict__)
-
-    def _get_saml2_ecp_assertion(self):
-        token = json.dumps(self._generate_token_json())
+        })
         url = self.auth_url + '/auth/OS-FEDERATION/saml2/ecp'
-        r = self.session.post(url=url, data=token, verify=False)
+        r = self.session.post(url=url, data=request_body, verify=False)
         self._check_response(r)
-        self.assertion = str(r.text)
+        return str(r.text)
 
-    def _get_sp(self):
+    def _get_service_provider(self):
         url = self.auth_url + '/OS-FEDERATION/service_providers/' + self.sp_id
         r = self.session.get(url=url, verify=False)
         self._check_response(r)
@@ -182,14 +182,14 @@ class K2KFederationTestCase(unittest.TestCase):
     def _handle_http_302_ecp_redirect(self, response, location, **kwargs):
         return self.session.get(location, authenticated=False, **kwargs)
 
-    def _exchange_assertion(self):
+    def _exchange_assertion(self, assertion):
         """Send assertion to a Keystone SP and get token."""
-        sp = self._get_sp()
+        sp = self._get_service_provider()
 
         r = self.session.post(
             sp[u'sp_url'],
             headers={'Content-Type': 'application/vnd.paos+xml'},
-            data=self.assertion,
+            data=assertion,
             authenticated=False,
             redirect=False)
 
@@ -201,9 +201,9 @@ class K2KFederationTestCase(unittest.TestCase):
         return r
 
     def test_workflow(self):
-        self._v3_authenticate()
-        self._get_saml2_ecp_assertion()
-        fed_token_response = self._exchange_assertion()
+        token_id = self._v3_authenticate()
+        assertion = self._get_saml2_ecp_assertion(token_id)
+        fed_token_response = self._exchange_assertion(assertion)
         fed_token_id = fed_token_response.headers.get('X-Subject-Token')
 
         r = self.session.get(
