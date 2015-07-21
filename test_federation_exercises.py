@@ -205,8 +205,6 @@ class K2KFederationTestCase(unittest.TestCase):
         self._get_saml2_ecp_assertion()
         fed_token_response = self._exchange_assertion()
         fed_token_id = fed_token_response.headers.get('X-Subject-Token')
-        import ipdb
-        ipdb.set_trace()
 
         r = self.session.get(
             url='https://%s/v3/OS-FEDERATION/projects' % SP_IP,
