@@ -92,10 +92,11 @@ class K2KFederationTestCase(unittest.TestCase):
         if mappings:
             mapping = mappings[0]
         else:
-            mapping = c.federation.mappings.create(mapping_id, rules=rules)
+            mapping = c.federation.mappings.create(mapping_id=mapping_id,
+                                                   rules=rules)
 
         idp_id = 'keystone-idp'
-        remote_id = IDP_ENDPOINT + '/OS-FEDERATION/saml2/idp'
+        remote_id = IDP_ENDPOINT + '/OS-FEDERATION/SAML2/idp'
         idp_ref = {'id': idp_id, 'remote_ids': [remote_id], 'enabled': True}
         idps = c.federation.identity_providers.list(id=idp_id)
         if idps:
@@ -118,7 +119,7 @@ class K2KFederationTestCase(unittest.TestCase):
         c = client.Client(session=s)
 
         sp_id = 'keystone.sp'
-        sp_url = 'https://%s/Shibboleth.sso/saml2/ecp' % SP_IP
+        sp_url = 'https://%s/Shibboleth.sso/SAML2/ECP' % SP_IP
         auth_url = ''.join(['https://%s/v3/OS-FEDERATION/identity_providers/',
                             'keystone-idp/protocols/saml2/auth']) % SP_IP
         sp_ref = {
@@ -199,7 +200,46 @@ class K2KFederationTestCase(unittest.TestCase):
                                                'application/vnd.paos+xml'})
         return r
 
-    def test_get_unscoped_token(self):
+    def test_workflow(self):
         self._v3_authenticate()
         self._get_saml2_ecp_assertion()
-        federated_token_ref = self._exchange_assertion()
+        fed_token_response = self._exchange_assertion()
+        fed_token_id = fed_token_response.headers.get('X-Subject-Token')
+        import ipdb
+        ipdb.set_trace()
+
+        r = self.session.get(
+            url='https://%s/v3/OS-FEDERATION/projects' % SP_IP,
+            headers={'X-Auth-Token': fed_token_id},
+            verify=False)
+        self._check_response(r)
+        projects = json.loads(str(r.text))
+
+        token_data = {
+            "auth": {
+                "identity": {
+                    "methods": [
+                        "token"
+                    ],
+                    "token": {
+                        "id": fed_token_id
+                    }
+                },
+                "scope": {
+                    "project": {
+                        "id": project_id
+                    }
+                }
+            }
+        }
+
+        # project_id can be select from the list in the previous step
+        token = json.dumps(token_data)
+        url = 'https://%s/v3/auth/tokens' % SP_IP
+        headers = {'X-Auth-Token': fed_token_id,
+                   'Content-Type': 'application/json'}
+        r = self.session.post(url=url, headers=headers, data=token,
+                              verify=False)
+        self._check_response(r)
+        self.scoped_token_id = r.headers['X-Subject-Token']
+        self.scoped_token = str(r.text)

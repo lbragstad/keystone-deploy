@@ -15,36 +15,8 @@ Listen 443
 Listen 35357
 
 <VirtualHost *:443>
-    WSGIScriptAlias / /var/keystone/main
-    WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /var/keystone/main/$1
-    WSGIDaemonProcess keystone-main processes={{ process_count }} threads={{ thread_count }} display-name=keystone-main
-    WSGIProcessGroup keystone-main
-
-    ErrorLog /var/log/apache2/keystone-main.error.log
-    LogLevel info
-    CustomLog /var/log/apache2/keystone-main.access.log combined
-
-    {% if apache24|success -%}
-
-    <Directory /var/keystone>
-        Require all granted
-    </Directory>
-
-    {% else -%}
-
-    <Directory /var/keystone>
-        Order allow,deny
-        Allow from all
-    </Directory>
-
-    {% endif -%}
-    SSLCertificateFile "/etc/keystone/ssl/certs/signing_cert.pem"
-    SSLCertificateKeyFile "/etc/keystone/ssl/private/signing_key.pem"
-</VirtualHost>
-
-<VirtualHost *:35357>
     WSGIScriptAlias / /var/keystone/admin
-    WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/.*?/protocols/.*?/auth)$ /var/keystone/admin/$1
+    WSGIScriptAliasMatch ^(/v3/OS-FEDERATION/identity_providers/keystone-idp/protocols/.*?/auth)$ /var/keystone/admin/$1
     WSGIDaemonProcess keystone-admin processes={{ process_count }} threads={{ thread_count }} display-name=keystone-admin
     WSGIProcessGroup keystone-admin
 
@@ -70,11 +42,36 @@ Listen 35357
     SSLCertificateKeyFile "/etc/keystone/ssl/private/signing_key.pem"
 </VirtualHost>
 
+<VirtualHost *:35357>
+    WSGIScriptAlias / /var/keystone/main
+    WSGIDaemonProcess keystone-main processes={{ process_count }} threads={{ thread_count }} display-name=keystone-main
+    WSGIProcessGroup keystone-main
+
+    ErrorLog /var/log/apache2/keystone-main.error.log
+    LogLevel info
+    CustomLog /var/log/apache2/keystone-main.access.log combined
+
+    {% if apache24|success -%}
+
+    <Directory /var/keystone>
+        Require all granted
+    </Directory>
+
+    {% else -%}
+
+    <Directory /var/keystone>
+        Order allow,deny
+        Allow from all
+    </Directory>
+
+    {% endif -%}
+</VirtualHost>
+
 <Location /Shibboleth.sso>
     SetHandler shib
 </Location>
 
-<LocationMatch /v3/OS-FEDERATION/identity_providers/.*?/protocols/saml2/auth>
+<LocationMatch /v3/OS-FEDERATION/identity_providers/keystone-idp/protocols/saml2/auth>
     ShibRequestSetting requireSession 1
     AuthType shibboleth
     ShibExportAssertion Off

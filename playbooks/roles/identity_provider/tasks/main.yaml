@@ -24,15 +24,6 @@
     - { line: 'idp_entity_id=https://{{ ansible_default_ipv4["address"] }}/v3/OS-FEDERATION/saml2/idp' }
     - { line: 'idp_sso_endpoint=https://{{ ansible_default_ipv4["address"] }}/v3/OS-FEDERATION/saml2/sso' }
     - { line: 'idp_metadata_path=/etc/keystone/keystone_idp_metadata.xml' }
-    - { line: 'idp_organization_name=example' }
-    - { line: 'idp_organization_display_name=example' }
-    - { line: 'idp_organization_url=example.org' }
-    - { line: 'idp_contact_company=example_contact' }
-    - { line: 'idp_contact_name=Example' }
-    - { line: 'idp_contact_surname=Contact' }
-    - { line: 'idp_contact_email=example.contact@example.com' }
-    - { line: 'idp_contact_telephone=555-555-5555' }
-    - { line: 'idp_contact_type=technical' }
   notify:
     restart services
 
