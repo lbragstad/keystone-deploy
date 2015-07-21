@@ -1,0 +1,9 @@
+- hosts: db
+  gather_facts: false
+  tasks:
+  - name: check cluster osu method
+    shell: >
+      mysql -e "SHOW VARIABLES LIKE '%wsrep_osu%';" | awk '{ print $2 }' | awk 'FNR == 2 { print }'
+    register: cluster_osu_method
+  - name: cluster osu method
+    debug: msg='{{ cluster_osu_method.stdout }}'
