@@ -69,26 +69,41 @@ def bootstrap(endpoint_ip):
             interface='admin',
             url=endpoint_ip + 'v3')
 
+    return (domain.name, role.id, project.id, user.name, password)
+
 
 class K2KFederationTestCase(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        bootstrap(os.environ.get('OS_IDP_IP'))
-        bootstrap(os.environ.get('OS_SP_IP'))
+        # collect service provider info
+        cls.sp_id = os.environ.get('OS_SP_ID')
+        cls.sp_ip = os.environ.get('OS_SP_IP')
+        cls.sp_endpoint_url = 'https://%s/v3' % cls.sp_ip
+        # collect identity provider info
+        cls.idp_ip = os.environ.get('OS_IDP_IP')
+        cls.idp_endpoint_url = 'https://%s/v3' % cls.idp_ip
+
+        # bootstrap service provider
+        (cls.sp_domain_name, cls.sp_role_id, cls.sp_project_id,
+            cls.sp_user_name, cls.sp_user_pass) = bootstrap(cls.sp_ip)
+        # bootstrap identity provider
+        (cls.idp_domain_name, cls.idp_role_id, cls.idp_project_id,
+            cls.idp_user_name, cls.idp_user_pass) = bootstrap(cls.idp_ip)
 
     def setUp(self):
+
         # collect service provider info
-        self.sp_id = os.environ.get('OS_SP_ID')
-        self.sp_ip = os.environ.get('OS_SP_IP')
-        self.sp_endpoint_url = 'https://%s/v3' % self.sp_ip
-        self.sp_project_id = os.environ.get('OS_SP_PROJECT_ID')
-        self.sp_user = os.environ.get('OS_SP_USERNAME')
-        self.sp_password = os.environ.get('OS_SP_PASSWORD')
+        # self.sp_id = os.environ.get('OS_SP_ID')
+        # self.sp_ip = os.environ.get('OS_SP_IP')
+        # self.sp_endpoint_url = 'https://%s/v3' % self.sp_ip
+        # self.sp_project_id = os.environ.get('OS_SP_PROJECT_ID')
+        # self.sp_user = os.environ.get('OS_SP_USERNAME')
+        # self.sp_password = os.environ.get('OS_SP_PASSWORD')
 
         # collect identity provider info
-        self.idp_ip = os.environ.get('OS_IDP_IP')
-        self.idp_endpoint_url = 'https://%s/v3' % self.idp_ip
+        # self.idp_ip = os.environ.get('OS_IDP_IP')
+        # self.idp_endpoint_url = 'https://%s/v3' % self.idp_ip
 
         # setup the service provider and the identity provider
         self._setup_identity_provider()
@@ -96,11 +111,11 @@ class K2KFederationTestCase(unittest.TestCase):
 
     def _setup_service_provider(self):
         a = v3.Password(auth_url=self.sp_endpoint_url,
-                        username='admin',
-                        password='password',
-                        user_domain_name='Default',
-                        project_name='admin',
-                        project_domain_name='Default')
+                        username=self.sp_user_name,
+                        password=self.sp_user_pass,
+                        user_domain_name=self.sp_domain_name,
+                        project_id=self.sp_project_id,
+                        project_domain_name=self.sp_domain_name)
         s = session.Session(auth=a, verify=False)
         c = client.Client(session=s)
 
@@ -118,15 +133,9 @@ class K2KFederationTestCase(unittest.TestCase):
         else:
             group = c.groups.create(domain=domain, name=group_name)
 
-        role_name = 'admin'
-        roles = c.roles.list(name='admin')
-        if roles:
-            role = roles[0]
-        else:
-            role = c.roles.create(name=role_name)
-
-        c.roles.grant(role=role, group=group, domain=domain)
-        c.roles.grant(role=role, group=group, project=self.sp_project_id)
+        c.roles.grant(role=self.sp_role_id, group=group, domain=domain)
+        c.roles.grant(role=self.sp_role_id, group=group,
+                      project=self.sp_project_id)
 
         rules = [{
             "local": [
@@ -173,11 +182,11 @@ class K2KFederationTestCase(unittest.TestCase):
 
     def _setup_identity_provider(self):
         a = v3.Password(auth_url=self.idp_endpoint_url,
-                        username='admin',
-                        password='password',
-                        user_domain_name='Default',
-                        project_name='admin',
-                        project_domain_name='Default')
+                        username=self.idp_user_name,
+                        password=self.idp_user_pass,
+                        user_domain_name=self.idp_domain_name,
+                        project_id=self.idp_project_id,
+                        project_domain_name=self.idp_domain_name)
         s = session.Session(auth=a, verify=False)
         c = client.Client(session=s)
 
@@ -206,19 +215,17 @@ class K2KFederationTestCase(unittest.TestCase):
 
     def test_full_workflow(self):
         CREDENTIALS = {
-            'auth_url': 'https://104.239.165.190/v3',
-            'username': 'admin',
-            'user_domain_name': 'default',
-            'password': 'password',
-            # project_id of the identity provider
-            'project_id': '92a0b22275284c83b3efc37433751038'
-
+            'auth_url': self.idp_endpoint_url,
+            'username': self.idp_user_name,
+            'user_domain_name': self.idp_domain_name,
+            'password': self.idp_user_pass,
+            'project_id': self.idp_project_id
         }
         s = session.Session(verify=False)
         passwd = password_plugin.Password(**CREDENTIALS)
         K2K_CREDENTIALS = {
             'base_plugin': passwd,
-            'service_provider': 'keystone.sp',
+            'service_provider': self.sp_id,
         }
 
         # get an unscoped token
@@ -228,7 +235,7 @@ class K2KFederationTestCase(unittest.TestCase):
 
         # get a list of projects from the service provider
         projects = requests.get(
-            url='https://104.239.165.207/v3/auth/projects',
+            url=self.sp_endpoint_url + '/auth/projects',
             headers={'X-Auth-Token': unscoped_federated_token},
             verify=False)
         projects = json.loads(projects.text)
@@ -237,8 +244,7 @@ class K2KFederationTestCase(unittest.TestCase):
         # get a project scoped token from the service provider
         K2K_CREDENTIALS = {
             'base_plugin': passwd,
-            'service_provider': 'keystone.sp',
-            # project_id of the service provider
+            'service_provider': self.sp_id,
             'project_id': project_id
         }
         k2k = k2k_plugin.Keystone2Keystone(**K2K_CREDENTIALS)
@@ -247,7 +253,7 @@ class K2KFederationTestCase(unittest.TestCase):
 
         # validate the project scoped token
         r = requests.get(
-            url='https://104.239.165.207/v3/auth/tokens',
+            url=self.sp_endpoint_url + '/auth/tokens',
             headers={'X-Auth-Token': scoped_federated_token,
                      'X-Subject-Token': scoped_federated_token},
             verify=False)
