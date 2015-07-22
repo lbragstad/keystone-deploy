@@ -92,19 +92,6 @@ class K2KFederationTestCase(unittest.TestCase):
             cls.idp_user_name, cls.idp_user_pass) = bootstrap(cls.idp_ip)
 
     def setUp(self):
-
-        # collect service provider info
-        # self.sp_id = os.environ.get('OS_SP_ID')
-        # self.sp_ip = os.environ.get('OS_SP_IP')
-        # self.sp_endpoint_url = 'https://%s/v3' % self.sp_ip
-        # self.sp_project_id = os.environ.get('OS_SP_PROJECT_ID')
-        # self.sp_user = os.environ.get('OS_SP_USERNAME')
-        # self.sp_password = os.environ.get('OS_SP_PASSWORD')
-
-        # collect identity provider info
-        # self.idp_ip = os.environ.get('OS_IDP_IP')
-        # self.idp_endpoint_url = 'https://%s/v3' % self.idp_ip
-
         # setup the service provider and the identity provider
         self._setup_identity_provider()
         self._setup_service_provider()
