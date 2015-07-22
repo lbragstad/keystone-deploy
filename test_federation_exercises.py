@@ -91,18 +91,18 @@ class K2KFederationTestCase(unittest.TestCase):
         (cls.idp_domain_name, cls.idp_role_id, cls.idp_project_id,
             cls.idp_user_name, cls.idp_user_pass) = bootstrap(cls.idp_ip)
 
-    def setUp(self):
         # setup the service provider and the identity provider
-        self._setup_identity_provider()
-        self._setup_service_provider()
+        cls._setup_identity_provider()
+        cls._setup_service_provider()
 
-    def _setup_service_provider(self):
-        a = v3.Password(auth_url=self.sp_endpoint_url,
-                        username=self.sp_user_name,
-                        password=self.sp_user_pass,
-                        user_domain_name=self.sp_domain_name,
-                        project_id=self.sp_project_id,
-                        project_domain_name=self.sp_domain_name)
+    @classmethod
+    def _setup_service_provider(cls):
+        a = v3.Password(auth_url=cls.sp_endpoint_url,
+                        username=cls.sp_user_name,
+                        password=cls.sp_user_pass,
+                        user_domain_name=cls.sp_domain_name,
+                        project_id=cls.sp_project_id,
+                        project_domain_name=cls.sp_domain_name)
         s = session.Session(auth=a, verify=False)
         c = client.Client(session=s)
 
@@ -120,9 +120,9 @@ class K2KFederationTestCase(unittest.TestCase):
         else:
             group = c.groups.create(domain=domain, name=group_name)
 
-        c.roles.grant(role=self.sp_role_id, group=group, domain=domain)
-        c.roles.grant(role=self.sp_role_id, group=group,
-                      project=self.sp_project_id)
+        c.roles.grant(role=cls.sp_role_id, group=group, domain=domain)
+        c.roles.grant(role=cls.sp_role_id, group=group,
+                      project=cls.sp_project_id)
 
         rules = [{
             "local": [
@@ -155,7 +155,7 @@ class K2KFederationTestCase(unittest.TestCase):
                                                    rules=rules)
 
         idp_id = 'keystone-idp'
-        remote_id = self.idp_endpoint_url + '/OS-FEDERATION/SAML2/idp'
+        remote_id = cls.idp_endpoint_url + '/OS-FEDERATION/SAML2/idp'
         idp_ref = {'id': idp_id, 'remote_ids': [remote_id], 'enabled': True}
         idps = c.federation.identity_providers.list(id=idp_id)
         if idps:
@@ -167,26 +167,27 @@ class K2KFederationTestCase(unittest.TestCase):
         if not protocols:
             c.federation.protocols.create('saml2', idp, mapping)
 
-    def _setup_identity_provider(self):
-        a = v3.Password(auth_url=self.idp_endpoint_url,
-                        username=self.idp_user_name,
-                        password=self.idp_user_pass,
-                        user_domain_name=self.idp_domain_name,
-                        project_id=self.idp_project_id,
-                        project_domain_name=self.idp_domain_name)
+    @classmethod
+    def _setup_identity_provider(cls):
+        a = v3.Password(auth_url=cls.idp_endpoint_url,
+                        username=cls.idp_user_name,
+                        password=cls.idp_user_pass,
+                        user_domain_name=cls.idp_domain_name,
+                        project_id=cls.idp_project_id,
+                        project_domain_name=cls.idp_domain_name)
         s = session.Session(auth=a, verify=False)
         c = client.Client(session=s)
 
-        sp_url = 'https://%s/Shibboleth.sso/SAML2/ECP' % self.sp_ip
+        sp_url = 'https://%s/Shibboleth.sso/SAML2/ECP' % cls.sp_ip
         auth_url = ''.join(['https://%s/v3/OS-FEDERATION/identity_providers/',
-                            'keystone-idp/protocols/saml2/auth']) % self.sp_ip
+                            'keystone-idp/protocols/saml2/auth']) % cls.sp_ip
         sp_ref = {
-            'id': self.sp_id,
+            'id': cls.sp_id,
             'sp_url': sp_url,
             'auth_url': auth_url,
             'enabled': True
         }
-        service_providers = c.federation.service_providers.list(id=self.sp_id)
+        service_providers = c.federation.service_providers.list(id=cls.sp_id)
         if not service_providers:
             c.federation.service_providers.create(**sp_ref)
 
