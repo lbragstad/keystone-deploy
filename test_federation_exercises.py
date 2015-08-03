@@ -13,7 +13,7 @@ from keystoneclient.v3 import client
 def bootstrap(endpoint_ip):
     c = client.Client(
         token='ADMIN',
-        endpoint='http://' + endpoint_ip + ':35357/v3')
+        endpoint='http://' + endpoint_ip + ':35357/v3/')
 
     domain = c.domains.get('default')
 
@@ -62,12 +62,12 @@ def bootstrap(endpoint_ip):
         c.endpoints.create(
             service=service,
             interface='public',
-            url=endpoint_ip + 'v3')
+            url='https://' + endpoint_ip + '/v3/')
     if not [x for x in endpoints if x.interface == 'admin']:
         c.endpoints.create(
             service=service,
             interface='admin',
-            url=endpoint_ip + 'v3')
+            url='https://' + endpoint_ip + '/v3/')
 
     return (domain.name, role.id, project.id, user.name, password)
 

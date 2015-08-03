@@ -69,6 +69,13 @@
     - python-memcached
     - six  # workaround for debian wheezy?
 
+- name: install project dependencies
+  pip:
+    requirements=/opt/{{ item }}/requirements.txt
+  with_items:
+    - keystone
+    - python-keystoneclient
+
 - name: install python projects
   shell: cd /opt/{{ item }} && python setup.py install
   with_items:
